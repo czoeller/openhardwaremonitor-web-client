@@ -1,11 +1,12 @@
 plugins {
     kotlin("jvm") version "2.3.0"
     kotlin("plugin.serialization") version "2.3.0"
+    id("org.jetbrains.dokka") version "2.0.0"
     `java-library`
     `maven-publish`
 }
 
-group = "de.czoeller"
+group = "com.github.czoeller"
 
 val releaseVersion = providers.gradleProperty("releaseVersion").orNull
     ?: providers.environmentVariable("GITHUB_REF_NAME").orNull
@@ -19,7 +20,6 @@ repositories {
 
 java {
     withSourcesJar()
-    withJavadocJar()
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(21))
     }
@@ -34,10 +34,17 @@ tasks.test {
     useJUnitPlatform()
 }
 
+val javadocJar by tasks.registering(Jar::class) {
+    dependsOn(tasks.dokkaJavadoc)
+    archiveClassifier.set("javadoc")
+    from(tasks.dokkaJavadoc.flatMap { it.outputDirectory })
+}
+
 publishing {
     publications {
         register<MavenPublication>("java") {
             from(components["java"])
+            artifact(javadocJar)
         }
     }
 }
