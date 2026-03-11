@@ -17,13 +17,13 @@ It fetches the hardware tree, parses the response, flattens sensors, and exposes
 JitPack:
 
 ```kotlin
-implementation("com.github.czoeller:openhardwaremonitor-web-client:0.0.2")
+implementation("com.github.czoeller:openhardwaremonitor-web-client:1.0.0")
 ```
 
 ## Kotlin Example
 
 ```kotlin
-import io.github.czoeller.openhardwaremonitor.client.HttpOpenHardwareMonitorClient
+import de.czoeller.openhardwaremonitor.client.HttpOpenHardwareMonitorClient
 
 val client = HttpOpenHardwareMonitorClient("http://localhost:8085")
 val snapshot = client.fetchSnapshot()
@@ -36,9 +36,9 @@ println(metrics.gpuTempC)
 ## Java Example
 
 ```java
-import io.github.czoeller.openhardwaremonitor.client.HttpOpenHardwareMonitorClient;
-import io.github.czoeller.openhardwaremonitor.client.OpenHardwareMonitorMetrics;
-import io.github.czoeller.openhardwaremonitor.client.OpenHardwareMonitorSnapshot;
+import de.czoeller.openhardwaremonitor.client.HttpOpenHardwareMonitorClient;
+import de.czoeller.openhardwaremonitor.client.OpenHardwareMonitorMetrics;
+import de.czoeller.openhardwaremonitor.client.OpenHardwareMonitorSnapshot;
 
 public class Main {
     public static void main(String[] args) throws Exception {

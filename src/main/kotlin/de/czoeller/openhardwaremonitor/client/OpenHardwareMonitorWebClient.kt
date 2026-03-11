@@ -1,4 +1,4 @@
-package io.github.czoeller.openhardwaremonitor.client
+package de.czoeller.openhardwaremonitor.client
 
 import java.io.IOException
 import java.net.URI

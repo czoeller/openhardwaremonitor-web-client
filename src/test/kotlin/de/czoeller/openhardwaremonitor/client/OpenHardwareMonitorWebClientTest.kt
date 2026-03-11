@@ -1,4 +1,4 @@
-package io.github.czoeller.openhardwaremonitor.client
+package de.czoeller.openhardwaremonitor.client
 
 import java.net.URI
 import java.net.http.HttpClient
