@@ -14,10 +14,10 @@ It fetches the hardware tree, parses the response, flattens sensors, and exposes
 
 ## Coordinates
 
-GitHub Packages:
+JitPack:
 
 ```kotlin
-implementation("io.github.czoeller:openhardwaremonitor-web-client:0.1.0")
+implementation("com.github.czoeller:openhardwaremonitor-web-client:0.0.2")
 ```
 
 ## Kotlin Example
@@ -56,22 +56,10 @@ public class Main {
 
 ## Gradle Setup
 
-GitHub Packages requires authentication:
-
 ```kotlin
 repositories {
     mavenCentral()
-    maven {
-        url = uri("https://maven.pkg.github.com/czoeller/bongo_cat_monitor")
-        credentials {
-            username = providers.gradleProperty("gpr.user")
-                .orElse(providers.environmentVariable("GITHUB_ACTOR"))
-                .get()
-            password = providers.gradleProperty("gpr.key")
-                .orElse(providers.environmentVariable("GITHUB_TOKEN"))
-                .get()
-        }
-    }
+    maven("https://jitpack.io")
 }
 ```
 
@@ -86,10 +74,4 @@ If `/data.json` is missing, it is appended automatically.
 
 ## Publishing
 
-The module publishes:
-
-- main jar
-- sources jar
-- javadoc jar
-
-GitHub Actions builds and tests the project on pushes and pull requests, and publishes the library to GitHub Packages on GitHub releases or manual workflow dispatch.
+Create a Git tag such as `0.0.2`, push it to GitHub, and JitPack will build that tag on demand.
