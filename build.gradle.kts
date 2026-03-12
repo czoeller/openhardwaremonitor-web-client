@@ -10,8 +10,10 @@ plugins {
 group = "com.github.czoeller"
 
 val releaseVersion = providers.gradleProperty("releaseVersion").orNull
+    ?: providers.environmentVariable("JITPACK_TAG").orNull
     ?: providers.environmentVariable("GITHUB_REF_NAME").orNull
-        ?.takeIf { providers.environmentVariable("GITHUB_EVENT_NAME").orNull == "release" }
+        ?.removePrefix("refs/tags/")
+        ?.takeIf { it.isNotBlank() }
 
 version = releaseVersion ?: "1.0-SNAPSHOT"
 
