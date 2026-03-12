@@ -8,6 +8,7 @@ import java.net.http.HttpResponse
 import java.net.http.HttpResponse.BodyHandler
 import java.util.Optional
 import javax.net.ssl.SSLSession
+import kotlin.time.Duration.Companion.seconds
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -33,13 +34,30 @@ class OpenHardwareMonitorWebClientTest {
         assertEquals(44, metrics.gpuTempC)
         assertFalse(snapshot.sensors().any { it.rawValue == "Value" })
     }
+
+    @Test
+    fun appliesCustomKotlinTimeoutToRequest() {
+        val httpClient = FakeHttpClient("{}")
+        val client = DefaultOpenHardwareMonitorWebClient(
+            endpoint = "http://localhost:8085",
+            timeout = 5.seconds,
+            httpClient = httpClient
+        )
+
+        client.fetchSnapshot()
+
+        assertEquals(java.time.Duration.ofSeconds(5), httpClient.lastRequest?.timeout()?.orElseThrow())
+    }
 }
 
 private class FakeHttpClient(
     private val body: String,
     private val statusCode: Int = 200
 ) : HttpClient() {
+    var lastRequest: HttpRequest? = null
+
     override fun <T : Any?> send(request: HttpRequest?, responseBodyHandler: BodyHandler<T>?): HttpResponse<T> {
+        lastRequest = request
         @Suppress("UNCHECKED_CAST")
         return FakeHttpResponse(body as T, statusCode)
     }
