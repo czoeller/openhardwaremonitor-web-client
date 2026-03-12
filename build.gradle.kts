@@ -10,7 +10,7 @@ plugins {
 }
 
 group = "com.github.czoeller"
-version = "1.0-SNAPSHOT"
+version = providers.environmentVariable("VERSION").orElse("1.0-SNAPSHOT").get()
 
 repositories {
     mavenCentral()
