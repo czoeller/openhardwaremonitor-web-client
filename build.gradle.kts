@@ -1,4 +1,5 @@
 import org.gradle.jvm.tasks.Jar
+import org.gradle.api.publish.tasks.GenerateModuleMetadata
 
 plugins {
     kotlin("jvm") version "2.2.0"
@@ -34,6 +35,10 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+tasks.withType<GenerateModuleMetadata>().configureEach {
+    enabled = false
 }
 
 val dokkaJavadocJar by tasks.registering(Jar::class) {
