@@ -7,9 +7,10 @@ plugins {
     `maven-publish`
 }
 
-group = "com.github.czoeller"
+group = providers.gradleProperty("group").orNull ?: "com.github.czoeller"
 
-val releaseVersion = providers.gradleProperty("releaseVersion").orNull
+val releaseVersion = providers.gradleProperty("version").orNull
+    ?: providers.gradleProperty("releaseVersion").orNull
     ?: providers.environmentVariable("JITPACK_TAG").orNull
     ?: providers.environmentVariable("GITHUB_REF_NAME").orNull
         ?.removePrefix("refs/tags/")
