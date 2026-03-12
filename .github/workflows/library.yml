@@ -22,7 +22,7 @@ jobs:
       - name: Change wrapper permissions
         run: chmod +x ./gradlew
       - name: Build and test
-        run: ./gradlew test
+        run: ./gradlew clean build test dokkaGeneratePublicationJavadoc
       - name: Upload library artifacts
         if: always()
         uses: actions/upload-artifact@v4
