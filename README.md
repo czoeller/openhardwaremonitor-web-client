@@ -23,9 +23,9 @@ implementation("com.github.czoeller:openhardwaremonitor-web-client:1.0.0")
 ## Kotlin Example
 
 ```kotlin
-import de.czoeller.openhardwaremonitor.client.HttpOpenHardwareMonitorClient
+import de.czoeller.openhardwaremonitor.client.DefaultOpenHardwareMonitorWebClient
 
-val client = HttpOpenHardwareMonitorClient("http://localhost:8085")
+val client = DefaultOpenHardwareMonitorWebClient("http://localhost:8085")
 val snapshot = client.fetchSnapshot()
 val metrics = snapshot.metrics()
 
@@ -36,14 +36,15 @@ println(metrics.gpuTempC)
 ## Java Example
 
 ```java
-import de.czoeller.openhardwaremonitor.client.HttpOpenHardwareMonitorClient;
+import de.czoeller.openhardwaremonitor.client.OpenHardwareMonitorWebClient;
+import de.czoeller.openhardwaremonitor.client.DefaultOpenHardwareMonitorWebClient;
 import de.czoeller.openhardwaremonitor.client.OpenHardwareMonitorMetrics;
 import de.czoeller.openhardwaremonitor.client.OpenHardwareMonitorSnapshot;
 
 public class Main {
     public static void main(String[] args) throws Exception {
-        HttpOpenHardwareMonitorClient client =
-            new HttpOpenHardwareMonitorClient("http://localhost:8085");
+        OpenHardwareMonitorWebClient client =
+            new DefaultOpenHardwareMonitorWebClient("http://localhost:8085");
 
         OpenHardwareMonitorSnapshot snapshot = client.fetchSnapshot();
         OpenHardwareMonitorMetrics metrics = snapshot.metrics();

@@ -18,7 +18,7 @@ class OpenHardwareMonitorWebClientTest {
         val json = requireNotNull(
             OpenHardwareMonitorWebClientTest::class.java.getResource("/ohm/sample-data.json")
         ).readText()
-        val client = HttpOpenHardwareMonitorClient(
+        val client = DefaultOpenHardwareMonitorWebClient(
             endpoint = "http://localhost:8085",
             httpClient = FakeHttpClient(json)
         )
