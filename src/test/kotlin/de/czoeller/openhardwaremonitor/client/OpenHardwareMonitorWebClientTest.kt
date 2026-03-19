@@ -1,17 +1,23 @@
 package de.czoeller.openhardwaremonitor.client
 
+import java.io.IOException
 import java.net.URI
+import java.net.ServerSocket
 import java.net.http.HttpClient
 import java.net.http.HttpHeaders
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.net.http.HttpResponse.BodyHandler
+import java.util.concurrent.CountDownLatch
 import java.util.Optional
 import javax.net.ssl.SSLSession
 import kotlin.time.Duration.Companion.seconds
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
+import kotlin.test.assertTrue
+import kotlin.test.assertFailsWith
 
 class OpenHardwareMonitorWebClientTest {
     @Test
@@ -47,6 +53,81 @@ class OpenHardwareMonitorWebClientTest {
         client.fetchSnapshot()
 
         assertEquals(java.time.Duration.ofSeconds(5), httpClient.lastRequest?.timeout()?.orElseThrow())
+    }
+
+    @Test
+    fun httpClientParsesRealSampleAndNormalizesEndpoint() {
+        val json = requireNotNull(
+            OpenHardwareMonitorWebClientTest::class.java.getResource("/ohm/sample-data.json")
+        ).readText()
+        val httpClient = FakeHttpClient(json)
+        val client = HttpOpenHardwareMonitorClient(
+            endpoint = " http://localhost:8085/ ",
+            httpClient = httpClient
+        )
+
+        val snapshot = client.fetchSnapshot()
+
+        assertEquals("/data.json", httpClient.lastRequest?.uri()?.path)
+        assertEquals(59, snapshot.metrics().cpuTempC)
+    }
+
+    @Test
+    fun httpClientThrowsOnNonSuccessStatus() {
+        val client = HttpOpenHardwareMonitorClient(
+            endpoint = "http://localhost:8085",
+            httpClient = FakeHttpClient("{}", statusCode = 503)
+        )
+
+        val exception = assertFailsWith<IOException> {
+            client.fetchSnapshot()
+        }
+
+        assertEquals("Unexpected OpenHardwareMonitor response: HTTP 503", exception.message)
+    }
+
+    @Test
+    fun discoversFirstReachableEndpoint() {
+        ServerSocket(0).use { serverSocket ->
+            val accepted = CountDownLatch(1)
+            val acceptThread = Thread {
+                serverSocket.accept().use {
+                    accepted.countDown()
+                }
+            }
+            acceptThread.start()
+
+            val endpoint = OpenHardwareMonitorEndpointDiscovery.discover(
+                listOf(
+                    "   ",
+                    "http://127.0.0.1:${serverSocket.localPort}/",
+                    "http://127.0.0.1:1/"
+                )
+            )
+
+            accepted.await()
+            acceptThread.join(1_000)
+            assertEquals("http://127.0.0.1:${serverSocket.localPort}/", endpoint)
+        }
+    }
+
+    @Test
+    fun discoveryFailureIncludesAttemptedEndpoints() {
+        val exception = assertFailsWith<OpenHardwareMonitorEndpointDiscoveryException> {
+            OpenHardwareMonitorEndpointDiscovery.discover(
+                listOf(
+                    "http://127.0.0.1:1/",
+                    "http://"
+                )
+            )
+        }
+
+        assertEquals(2, exception.attempts.size)
+        assertEquals("http://127.0.0.1:1/", exception.attempts[0].endpoint)
+        assertEquals("http://", exception.attempts[1].endpoint)
+        assertTrue(exception.message!!.contains("http://127.0.0.1:1/"))
+        assertTrue(exception.message!!.contains("http://"))
+        assertIs<OpenHardwareMonitorEndpointAttempt>(exception.attempts.first())
     }
 }
 
