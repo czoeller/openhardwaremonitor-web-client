@@ -1,6 +1,9 @@
 package de.czoeller.openhardwaremonitor.client
 
 import java.io.IOException
+import java.net.Authenticator
+import java.net.CookieHandler
+import java.net.ProxySelector
 import java.net.URI
 import java.net.ServerSocket
 import java.net.http.HttpClient
@@ -8,8 +11,12 @@ import java.net.http.HttpHeaders
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.net.http.HttpResponse.BodyHandler
+import java.time.Duration
 import java.util.concurrent.CountDownLatch
 import java.util.Optional
+import java.util.concurrent.Executor
+import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLParameters
 import javax.net.ssl.SSLSession
 import kotlin.time.Duration.Companion.seconds
 import kotlin.test.Test
@@ -22,22 +29,14 @@ import kotlin.test.assertFailsWith
 class OpenHardwareMonitorWebClientTest {
     @Test
     fun parsesRealSampleAndExtractsMetrics() {
-        val json = requireNotNull(
-            OpenHardwareMonitorWebClientTest::class.java.getResource("/ohm/sample-data.json")
-        ).readText()
         val client = DefaultOpenHardwareMonitorWebClient(
             endpoint = "http://localhost:8085",
-            httpClient = FakeHttpClient(json)
+            httpClient = FakeHttpClient(sampleJson())
         )
 
         val snapshot = client.fetchSnapshot()
-        val metrics = snapshot.metrics()
 
-        assertEquals(2, metrics.cpuLoadPercent)
-        assertEquals(50, metrics.memoryLoadPercent)
-        assertEquals(59, metrics.cpuTempC)
-        assertEquals(1, metrics.gpuLoadPercent)
-        assertEquals(44, metrics.gpuTempC)
+        assertSampleMetrics(snapshot)
         assertFalse(snapshot.sensors().any { it.rawValue == "Value" })
     }
 
@@ -52,15 +51,13 @@ class OpenHardwareMonitorWebClientTest {
 
         client.fetchSnapshot()
 
-        assertEquals(java.time.Duration.ofSeconds(5), httpClient.lastRequest?.timeout()?.orElseThrow())
+        val request = requireNotNull(httpClient.lastRequest)
+        assertEquals(Duration.ofSeconds(5), request.timeout().orElseThrow())
     }
 
     @Test
     fun httpClientParsesRealSampleAndNormalizesEndpoint() {
-        val json = requireNotNull(
-            OpenHardwareMonitorWebClientTest::class.java.getResource("/ohm/sample-data.json")
-        ).readText()
-        val httpClient = FakeHttpClient(json)
+        val httpClient = FakeHttpClient(sampleJson())
         val client = HttpOpenHardwareMonitorClient(
             endpoint = " http://localhost:8085/ ",
             httpClient = httpClient
@@ -69,7 +66,7 @@ class OpenHardwareMonitorWebClientTest {
         val snapshot = client.fetchSnapshot()
 
         assertEquals("/data.json", httpClient.lastRequest?.uri()?.path)
-        assertEquals(59, snapshot.metrics().cpuTempC)
+        assertSampleMetrics(snapshot)
     }
 
     @Test
@@ -107,6 +104,7 @@ class OpenHardwareMonitorWebClientTest {
 
             accepted.await()
             acceptThread.join(1_000)
+            assertEquals(Thread.State.TERMINATED, acceptThread.state)
             assertEquals("http://127.0.0.1:${serverSocket.localPort}/", endpoint)
         }
     }
@@ -129,6 +127,19 @@ class OpenHardwareMonitorWebClientTest {
         assertTrue(exception.message!!.contains("http://"))
         assertIs<OpenHardwareMonitorEndpointAttempt>(exception.attempts.first())
     }
+
+    private fun sampleJson(): String = requireNotNull(
+        OpenHardwareMonitorWebClientTest::class.java.getResource("/ohm/sample-data.json")
+    ).readText()
+
+    private fun assertSampleMetrics(snapshot: OpenHardwareMonitorSnapshot) {
+        val metrics = snapshot.metrics()
+        assertEquals(2, metrics.cpuLoadPercent)
+        assertEquals(50, metrics.memoryLoadPercent)
+        assertEquals(59, metrics.cpuTempC)
+        assertEquals(1, metrics.gpuLoadPercent)
+        assertEquals(44, metrics.gpuTempC)
+    }
 }
 
 private class FakeHttpClient(
@@ -137,32 +148,32 @@ private class FakeHttpClient(
 ) : HttpClient() {
     var lastRequest: HttpRequest? = null
 
-    override fun <T : Any?> send(request: HttpRequest?, responseBodyHandler: BodyHandler<T>?): HttpResponse<T> {
+    override fun <T : Any> send(request: HttpRequest, responseBodyHandler: BodyHandler<T>): HttpResponse<T> {
         lastRequest = request
         @Suppress("UNCHECKED_CAST")
         return FakeHttpResponse(body as T, statusCode)
     }
 
-    override fun <T : Any?> sendAsync(
-        request: HttpRequest?,
-        responseBodyHandler: BodyHandler<T>?
+    override fun <T : Any> sendAsync(
+        request: HttpRequest,
+        responseBodyHandler: BodyHandler<T>
     ) = throw UnsupportedOperationException()
 
-    override fun <T : Any?> sendAsync(
-        request: HttpRequest?,
-        responseBodyHandler: BodyHandler<T>?,
-        pushPromiseHandler: HttpResponse.PushPromiseHandler<T>?
+    override fun <T : Any> sendAsync(
+        request: HttpRequest,
+        responseBodyHandler: BodyHandler<T>,
+        pushPromiseHandler: HttpResponse.PushPromiseHandler<T>
     ) = throw UnsupportedOperationException()
 
-    override fun cookieHandler(): Optional<java.net.CookieHandler> = Optional.empty()
-    override fun connectTimeout(): Optional<java.time.Duration> = Optional.empty()
-    override fun followRedirects(): HttpClient.Redirect = HttpClient.Redirect.NEVER
-    override fun proxy(): Optional<java.net.ProxySelector> = Optional.empty()
-    override fun sslContext(): javax.net.ssl.SSLContext = throw UnsupportedOperationException()
-    override fun sslParameters(): javax.net.ssl.SSLParameters = javax.net.ssl.SSLParameters()
-    override fun authenticator(): Optional<java.net.Authenticator> = Optional.empty()
-    override fun version(): HttpClient.Version = HttpClient.Version.HTTP_1_1
-    override fun executor(): Optional<java.util.concurrent.Executor> = Optional.empty()
+    override fun cookieHandler(): Optional<CookieHandler> = Optional.empty()
+    override fun connectTimeout(): Optional<Duration> = Optional.empty()
+    override fun followRedirects(): Redirect = Redirect.NEVER
+    override fun proxy(): Optional<ProxySelector> = Optional.empty()
+    override fun sslContext(): SSLContext = throw UnsupportedOperationException()
+    override fun sslParameters(): SSLParameters = SSLParameters()
+    override fun authenticator(): Optional<Authenticator> = Optional.empty()
+    override fun version(): Version = Version.HTTP_1_1
+    override fun executor(): Optional<Executor> = Optional.empty()
 }
 
 private class FakeHttpResponse<T>(
